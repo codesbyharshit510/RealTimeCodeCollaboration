@@ -18,26 +18,27 @@ const EditorPage = () => {
     const { roomId } = useParams();
     const reactNavigator = useNavigate();
     const [clients, setClients] = useState([]);
+    const [typingUser, setTypingUser] = useState('');
 
     useEffect(() => {
         const init = async () => {
             try {
                 socketRef.current = await initSocket();
-    
+
                 socketRef.current.on('connect_error', (err) => handleErrors(err));
                 socketRef.current.on('connect_failed', (err) => handleErrors(err));
-    
+
                 function handleErrors(e) {
                     console.log('socket error', e);
                     toast.error('Socket connection failed, try again later.');
                     reactNavigator('/');
                 }
-    
+
                 socketRef.current.emit(ACTIONS.JOIN, {
                     roomId,
                     username: location.state?.username,
                 });
-    
+
                 socketRef.current.on(ACTIONS.JOINED, ({ clients, username, socketId }) => {
                     if (username !== location.state?.username) {
                         toast.success(`${username} joined the room.`);
@@ -48,30 +49,39 @@ const EditorPage = () => {
                         socketId,
                     });
                 });
-    
+
                 socketRef.current.on(ACTIONS.DISCONNECTED, ({ socketId, username }) => {
                     toast.success(`${username} left the room.`);
-                    setClients((prev) => prev.filter((client) => client.socketId !== socketId));
+                    setClients((prev) =>
+                        prev.filter((client) => client.socketId !== socketId)
+                    );
                 });
+
+                // ✅ Listen for typing events
+                socketRef.current.on(ACTIONS.TYPING, ({ username }) => {
+                    if (username !== location.state?.username) {
+                        setTypingUser(`${username} is typing...`);
+                        setTimeout(() => setTypingUser(''), 3000);
+                    }
+                });
+
             } catch (err) {
                 console.error('Socket init error:', err);
                 toast.error('Could not connect to the server.');
             }
         };
-    
+
         init();
-    
+
         return () => {
             if (socketRef.current) {
-              socketRef.current.disconnect();
-              socketRef.current.off(ACTIONS.JOINED);
-              socketRef.current.off(ACTIONS.DISCONNECTED);
+                socketRef.current.disconnect();
+                socketRef.current.off(ACTIONS.JOINED);
+                socketRef.current.off(ACTIONS.DISCONNECTED);
+                socketRef.current.off(ACTIONS.TYPING);
             }
-          };
-          
-        
+        };
     }, []);
-    
 
     const copyRoomId = async () => {
         try {
@@ -123,10 +133,17 @@ const EditorPage = () => {
                 <Editor
                     socketRef={socketRef}
                     roomId={roomId}
+                    username={location.state?.username}
                     onCodeChange={(code) => {
                         codeRef.current = code;
                     }}
                 />
+                {/* ✅ Typing Indicator */}
+                {typingUser && (
+                    <div className="typing-indicator" style={{ padding: '8px', color: '#ccc' }}>
+                        {typingUser}
+                    </div>
+                )}
             </div>
         </div>
     );
