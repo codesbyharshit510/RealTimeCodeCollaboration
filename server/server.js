@@ -4,18 +4,32 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const ACTIONS = require('./src/Actions');
+const cors = require('cors');
+
+// Enable CORS for your frontend
+app.use(cors({
+    origin: 'https://real-time-code-collaboration-ebon.vercel.app/', // Allow the React frontend to connect
+    methods: ['GET', 'POST'],
+    credentials: true, // Allow cookies if needed
+}));
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    cors: {
+        origin: 'http://localhost:3000', // Allow the React frontend to connect
+        methods: ['GET', 'POST'],
+        credentials: true,
+    },
+});
 
-app.use(express.static('build'));
+app.use(express.static('build'));  // Serve React app for production
 app.use((req, res, next) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 const userSocketMap = {};
+
 function getAllConnectedClients(roomId) {
-    // Map
     return Array.from(io.sockets.adapter.rooms.get(roomId) || []).map(
         (socketId) => {
             return {
