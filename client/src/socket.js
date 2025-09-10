@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 
 const LOCAL_BACKEND = "http://localhost:5000";
-const PROD_BACKEND = "https://your-backend.onrender.com";
+const PROD_BACKEND = "https://realtimecodecollaboration2.onrender.com";
 
 export const initSocket = () => {
   return io(
